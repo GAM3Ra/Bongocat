@@ -1,21 +1,114 @@
---www.rblxscripts.net--
- 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/dizyhvh/slap_battles_gui/main/0.lua"))()
+import pygame
+import random
+import sys
 
+pygame.init()
 
+# Screen settings
+WIDTH = 400
+HEIGHT = 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Flappy Bird Clone")
 
+clock = pygame.time.Clock()
+font = pygame.font.SysFont(None, 40)
 
+# Colors
+WHITE = (255, 255, 255)
+BLUE = (135, 206, 235)
+GREEN = (0, 200, 0)
+YELLOW = (255, 255, 0)
 
+# Bird
+bird_x = 80
+bird_y = HEIGHT // 2
+bird_radius = 15
+bird_velocity = 0
+gravity = 0.5
+jump_strength = -8
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-other slap battle gui script
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Pipes
+pipe_width = 60
+pipe_gap = 150
+pipe_velocity = 3
+pipes = []
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/dizyhvh/rbx_scripts/main/slap_battles.lua"))()
+def create_pipe():
+    height = random.randint(100, 400)
+    top_pipe = pygame.Rect(WIDTH, 0, pipe_width, height)
+    bottom_pipe = pygame.Rect(WIDTH, height + pipe_gap, pipe_width, HEIGHT)
+    return top_pipe, bottom_pipe
 
+def draw_pipes(pipes):
+    for top, bottom in pipes:
+        pygame.draw.rect(screen, GREEN, top)
+        pygame.draw.rect(screen, GREEN, bottom)
 
+def move_pipes(pipes):
+    for pipe in pipes:
+        pipe[0].x -= pipe_velocity
+        pipe[1].x -= pipe_velocity
+    return [pipe for pipe in pipes if pipe[0].x > -pipe_width]
 
+def check_collision(pipes):
+    bird_rect = pygame.Rect(
+        bird_x - bird_radius,
+        bird_y - bird_radius,
+        bird_radius * 2,
+        bird_radius * 2
+    )
+    for top, bottom in pipes:
+        if bird_rect.colliderect(top) or bird_rect.colliderect(bottom):
+            return True
+    if bird_y <= 0 or bird_y >= HEIGHT:
+        return True
+    return False
 
+score = 0
+pipe_timer = 0
+running = True
 
+while running:
+    clock.tick(60)
+    screen.fill(BLUE)
 
-https://www.roblox.com/games/6403373529/Slap-Battles
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                bird_velocity = jump_strength
+
+    # Bird physics
+    bird_velocity += gravity
+    bird_y += bird_velocity
+
+    # Pipes
+    pipe_timer += 1
+    if pipe_timer > 90:
+        pipes.append(create_pipe())
+        pipe_timer = 0
+
+    pipes = move_pipes(pipes)
+
+    # Score
+    for pipe in pipes:
+        if pipe[0].x == bird_x:
+            score += 1
+
+    # Collision
+    if check_collision(pipes):
+        running = False
+
+    # Draw
+    draw_pipes(pipes)
+    pygame.draw.circle(screen, YELLOW, (bird_x, int(bird_y)), bird_radius)
+
+    score_text = font.render(f"Score: {score}", True, WHITE)
+    screen.blit(score_text, (10, 10))
+
+    pygame.display.update()
+
+print("Game Over! Final Score:", score)
+pygame.quit()
