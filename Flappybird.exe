@@ -1,40 +1,25 @@
-import pygame
-import random
-import sys
-
-pygame.init()
-
-# Screen settings
-WIDTH = 400
-HEIGHT = 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Flappy Bird Clone")
-
-clock = pygame.time.Clock()
-font = pygame.font.SysFont(None, 40)
-
-# Colors
-WHITE = (255, 255, 255)
 BLUE = (135, 206, 235)
 GREEN = (0, 200, 0)
 YELLOW = (255, 255, 0)
+GRAY = (200, 200, 200)
+BLACK = (0, 0, 0)
 
 # Bird
-bird_x = 80
+bird_x = 120
 bird_y = HEIGHT // 2
-bird_radius = 15
+bird_radius = 20
 bird_velocity = 0
 gravity = 0.5
 jump_strength = -8
 
 # Pipes
-pipe_width = 60
-pipe_gap = 150
-pipe_velocity = 3
+pipe_width = 80
+pipe_gap = 200
+pipe_velocity = 4
 pipes = []
 
 def create_pipe():
-    height = random.randint(100, 400)
+    height = random.randint(100, 500)
     top_pipe = pygame.Rect(WIDTH, 0, pipe_width, height)
     bottom_pipe = pygame.Rect(WIDTH, height + pipe_gap, pipe_width, HEIGHT)
     return top_pipe, bottom_pipe
@@ -64,9 +49,19 @@ def check_collision(pipes):
         return True
     return False
 
+def reset_game():
+    global bird_y, bird_velocity, pipes, score, pipe_timer
+    bird_y = HEIGHT // 2
+    bird_velocity = 0
+    pipes = []
+    score = 0
+    pipe_timer = 0
+
 score = 0
 pipe_timer = 0
 running = True
+game_active = True
+retry_button = pygame.Rect(0, 0, 0, 0)
 
 while running:
     clock.tick(60)
@@ -76,30 +71,41 @@ while running:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
+        
+        if game_active:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    bird_velocity = jump_strength
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 bird_velocity = jump_strength
+        else:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                if retry_button.collidepoint(mouse_pos):
+                    reset_game()
+                    game_active = True
 
-    # Bird physics
-    bird_velocity += gravity
-    bird_y += bird_velocity
+    if game_active:
+        # Bird physics
+        bird_velocity += gravity
+        bird_y += bird_velocity
 
-    # Pipes
-    pipe_timer += 1
-    if pipe_timer > 90:
-        pipes.append(create_pipe())
-        pipe_timer = 0
+        # Pipes
+        pipe_timer += 1
+        if pipe_timer > 90:
+            pipes.append(create_pipe())
+            pipe_timer = 0
 
-    pipes = move_pipes(pipes)
+        pipes = move_pipes(pipes)
 
-    # Score
-    for pipe in pipes:
-        if pipe[0].x == bird_x:
-            score += 1
+        # Score
+        for pipe in pipes:
+            if pipe[0].x == bird_x:
+                score += 1
 
-    # Collision
-    if check_collision(pipes):
-        running = False
+        # Collision
+        if check_collision(pipes):
+            game_active = False
 
     # Draw
     draw_pipes(pipes)
@@ -108,7 +114,24 @@ while running:
     score_text = font.render(f"Score: {score}", True, WHITE)
     screen.blit(score_text, (10, 10))
 
+    if not game_active:
+        # Overlay
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 128))
+        screen.blit(overlay, (0, 0))
+        
+        game_over_text = font.render("GAME OVER", True, WHITE)
+        text_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        screen.blit(game_over_text, text_rect)
+        
+        retry_button = pygame.Rect(WIDTH // 2 - 75, HEIGHT // 2 + 20, 150, 50)
+        pygame.draw.rect(screen, GRAY, retry_button)
+        pygame.draw.rect(screen, BLACK, retry_button, 2)
+        
+        retry_text = font.render("RETRY", True, BLACK)
+        retry_text_rect = retry_text.get_rect(center=retry_button.center)
+        screen.blit(retry_text, retry_text_rect)
+
     pygame.display.update()
 
-print("Game Over! Final Score:", score)
 pygame.quit()
